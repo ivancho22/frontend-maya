@@ -44,9 +44,9 @@
             try {
                 log("Conectando con el cerebro en la nube...");
                 
-                // 1. Obtener Token
+                // 1. Obtener Token de Render
                 const res = await fetch(`${BACKEND_URL}/get-token`);
-                if (!res.ok) throw new Error("Fallo al obtener token de Render");
+                if (!res.ok) throw new Error("Servidor Render no responde");
                 const data = await res.json();
                 accessToken = data.token;
                 log("Token validado con éxito.");
@@ -61,29 +61,29 @@
                     },
                     body: JSON.stringify({ 
                         version: "v2", 
-                        avatar_id: "Dexter_v3_public", 
-                        voice: { voice_id: "1bd001e8e50b4f73b6414e54290a3739" }
+                        avatar_id: "Dexter_v3_public" 
                     })
                 });
 
                 const sessionData = await sessionRes.json();
                 
-                if (!sessionData.data || !sessionData.data.session_id) {
-                    const errorMsg = sessionData.error ? sessionData.error.message : "ID de sesión no recibido";
-                    throw new Error(errorMsg);
+                // Validación estricta de la respuesta
+                if (sessionData && sessionData.data && sessionData.data.session_id) {
+                    sessionId = sessionData.data.session_id;
+                    log("Sesión establecida ID: " + sessionId.substring(0,8));
+                    status.innerText = "ONLINE - MAYA LISTA";
+                    
+                    document.getElementById('userInput').disabled = false;
+                    document.getElementById('sendBtn').disabled = false;
+                } else {
+                    const errorDetail = sessionRes.status === 401 ? "Token vencido" : "Avatar no disponible";
+                    throw new Error(errorDetail);
                 }
-                
-                sessionId = sessionData.data.session_id;
-                log("Sesión establecida ID: " + sessionId.substring(0,8));
-                status.innerText = "ONLINE - MAYA LISTA";
-                
-                document.getElementById('userInput').disabled = false;
-                document.getElementById('sendBtn').disabled = false;
 
             } catch (e) {
                 log("Fallo técnico: " + e.message);
                 status.innerText = "ERROR DE SISTEMA";
-                console.error("Error detallado:", e);
+                console.error("Detalle:", e);
             }
         }
 
@@ -111,7 +111,7 @@
                 });
                 log("Respuesta enviada a Maya.");
             } catch (e) {
-                log("Error al intentar que Maya hable.");
+                log("Error al enviar mensaje.");
             }
         }
 
