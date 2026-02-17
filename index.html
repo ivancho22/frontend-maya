@@ -39,53 +39,55 @@
         let sessionId = null;
         let accessToken = null;
 
-        async function init() {
-            const status = document.getElementById('status');
-            try {
-                log("Conectando con el cerebro en la nube...");
-                
-                // 1. Obtener Token de Render
-                const res = await fetch(`${BACKEND_URL}/get-token`);
-                if (!res.ok) throw new Error("Servidor Render no responde");
-                const data = await res.json();
-                accessToken = data.token;
-                log("Token validado con éxito.");
+        // Define el ID aquí para cambiarlo fácil
+const AVATAR_ID = "e0e84faea390465896db75a83be45085"; 
 
-                // 2. Crear Sesión en HeyGen
-                log("Iniciando sesión en HeyGen...");
-                const sessionRes = await fetch("https://api.heygen.com/v1/streaming.new", {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'Authorization': `Bearer ${accessToken}` 
-                    },
-                    body: JSON.stringify({ 
-                        version: "v2", 
-                        avatar_id: "Dexter_v3_public" 
-                    })
-                });
+async function init() {
+    const status = document.getElementById('status');
+    try {
+        log("Conectando con el cerebro en la nube...");
+        
+        const res = await fetch(`${BACKEND_URL}/get-token`);
+        if (!res.ok) throw new Error("Servidor Render no responde");
+        const data = await res.json();
+        accessToken = data.token;
+        log("Token validado con éxito.");
 
-                const sessionData = await sessionRes.json();
-                
-                // Validación estricta de la respuesta
-                if (sessionData && sessionData.data && sessionData.data.session_id) {
-                    sessionId = sessionData.data.session_id;
-                    log("Sesión establecida ID: " + sessionId.substring(0,8));
-                    status.innerText = "ONLINE - MAYA LISTA";
-                    
-                    document.getElementById('userInput').disabled = false;
-                    document.getElementById('sendBtn').disabled = false;
-                } else {
-                    const errorDetail = sessionRes.status === 401 ? "Token vencido" : "Avatar no disponible";
-                    throw new Error(errorDetail);
-                }
+        log(`Iniciando sesión con Avatar: ${AVATAR_ID}...`);
+        const sessionRes = await fetch("https://api.heygen.com/v1/streaming.new", {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${accessToken}` 
+            },
+            body: JSON.stringify({ 
+                version: "v2", 
+                avatar_id: AVATAR_ID,
+                voice: { voice_id: "26b209d004324f4c947a307d4f04189b" } // Voz de prueba
+            })
+        });
 
-            } catch (e) {
-                log("Fallo técnico: " + e.message);
-                status.innerText = "ERROR DE SISTEMA";
-                console.error("Detalle:", e);
-            }
+        const sessionData = await sessionRes.json();
+        
+        if (sessionData && sessionData.data && sessionData.data.session_id) {
+            sessionId = sessionData.data.session_id;
+            log("¡ÉXITO! Sesión ID: " + sessionId.substring(0,8));
+            status.innerText = "ONLINE - MAYA LISTA";
+            
+            document.getElementById('userInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+        } else {
+            // Este log te dirá exactamente qué dice HeyGen
+            const msg = sessionData.error ? sessionData.error.message : "ID no recibido";
+            log("HeyGen rechazó el avatar: " + msg);
+            throw new Error(msg);
         }
+
+    } catch (e) {
+        log("Fallo técnico: " + e.message);
+        status.innerText = "ERROR DE SISTEMA";
+    }
+}
 
         async function sendMessage() {
             const input = document.getElementById('userInput');
