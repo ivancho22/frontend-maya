@@ -35,9 +35,7 @@
             document.getElementById('log-box').scrollTop = 9999;
         };
 
-        // URL de tu servidor en Render (Ya validado)
         const BACKEND_URL = "https://avatar-coreia.onrender.com";
-
         let sessionId = null;
         let accessToken = null;
 
@@ -47,13 +45,13 @@
                 log("Conectando con el cerebro en la nube...");
                 
                 // 1. Obtener Token
-                const res = await fetch("https://avatar-coreia.onrender.com/get-token");
+                const res = await fetch(`${BACKEND_URL}/get-token`);
                 if (!res.ok) throw new Error("Fallo al obtener token de Render");
                 const data = await res.json();
                 accessToken = data.token;
                 log("Token validado con éxito.");
 
-                // 2. Crear Sesión (Aquí es donde falló antes)
+                // 2. Crear Sesión en HeyGen
                 log("Iniciando sesión en HeyGen...");
                 const sessionRes = await fetch("https://api.heygen.com/v1/streaming.new", {
                     method: 'POST',
@@ -63,18 +61,20 @@
                     },
                     body: JSON.stringify({ 
                         version: "v2", 
-                        avatar_id: 'Maya_Sitting_Public'
+                        avatar_id: "Dexter_v3_public", 
+                        voice: { voice_id: "1bd001e8e50b4f73b6414e54290a3739" }
                     })
                 });
 
                 const sessionData = await sessionRes.json();
-                if (!sessionData.data) {
-                    log("Error de HeyGen: " + JSON.stringify(sessionData.error));
-                    throw new Error("HeyGen no devolvió datos de sesión");
+                
+                if (!sessionData.data || !sessionData.data.session_id) {
+                    const errorMsg = sessionData.error ? sessionData.error.message : "ID de sesión no recibido";
+                    throw new Error(errorMsg);
                 }
                 
                 sessionId = sessionData.data.session_id;
-                log("Sesión de Maya creada ID: " + sessionId.substring(0,8));
+                log("Sesión establecida ID: " + sessionId.substring(0,8));
                 status.innerText = "ONLINE - MAYA LISTA";
                 
                 document.getElementById('userInput').disabled = false;
@@ -83,6 +83,7 @@
             } catch (e) {
                 log("Fallo técnico: " + e.message);
                 status.innerText = "ERROR DE SISTEMA";
+                console.error("Error detallado:", e);
             }
         }
 
@@ -96,7 +97,6 @@
             log("Maya procesando...");
 
             try {
-                // Hablar usando la API de HeyGen
                 await fetch("https://api.heygen.com/v1/streaming.task", {
                     method: 'POST',
                     headers: { 
